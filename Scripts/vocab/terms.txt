@@ -1,0 +1,196 @@
+# Terms the starter dictionary should get right. One per line, written the way
+# they should appear in text. Lines starting with # are categories/comments.
+# The harvester (harvest.py) speaks each one with several synthetic voices, asks
+# the REAL recogniser what it wrote, and turns the mistakes into rules — so this
+# file is the only thing to edit to grow the dictionary.
+
+# --- AI companies, models, tools ---
+Anthropic
+Claude
+Claude Code
+Sonnet
+Haiku
+Opus
+OpenAI
+ChatGPT
+Codex
+Gemini
+Copilot
+GitHub Copilot
+Cursor
+Perplexity
+Midjourney
+Stable Diffusion
+Hugging Face
+Llama
+Mistral
+DeepSeek
+Grok
+ElevenLabs
+Whisper
+Higgsfield
+Seedance
+Suno
+HeyGen
+Runway
+Sora
+Kling
+Veo
+Lovable
+Replit
+Windsurf
+NotebookLM
+LangChain
+Ollama
+LM Studio
+Wispr Flow
+Whispering Flow
+MCP
+LLM
+RAG
+GPU
+CLI
+SDK
+
+# --- developer platforms and infrastructure ---
+Supabase
+Cloudflare
+Vercel
+Netlify
+GitHub
+GitLab
+Bitbucket
+Docker
+Kubernetes
+PostgreSQL
+Postgres
+MySQL
+MongoDB
+Redis
+Firebase
+AWS
+Azure
+Terraform
+Nginx
+Sentry
+Datadog
+Grafana
+Postman
+Stripe
+Twilio
+SendGrid
+Resend
+Prisma
+GraphQL
+
+# --- languages, frameworks, tooling ---
+JavaScript
+TypeScript
+Python
+Rust
+Kotlin
+Flutter
+Node.js
+Next.js
+React
+Vue
+Svelte
+Tailwind
+SwiftUI
+Xcode
+VS Code
+Homebrew
+npm
+pnpm
+Vite
+Webpack
+ESLint
+JSON
+YAML
+OAuth
+SSH
+HTTP
+HTTPS
+URL
+API
+SQL
+NoSQL
+CSS
+HTML
+localhost
+
+# --- Apple ---
+macOS
+iOS
+iPadOS
+watchOS
+visionOS
+iCloud
+iPhone
+MacBook
+AirPods
+AirDrop
+FaceTime
+TestFlight
+App Store
+Spotlight
+
+# --- design, productivity, business software ---
+Figma
+Canva
+Notion
+Slack
+Zoom
+Zapier
+HubSpot
+Salesforce
+Airtable
+Trello
+Asana
+ClickUp
+Jira
+Confluence
+Mailchimp
+Klaviyo
+Calendly
+Loom
+Dropbox
+QuickBooks
+Xero
+PayPal
+Payhip
+Gumroad
+Shopify
+Squarespace
+Webflow
+WordPress
+Etsy
+Substack
+Patreon
+
+# --- social and messaging ---
+TikTok
+Instagram
+YouTube
+LinkedIn
+WhatsApp
+Telegram
+Discord
+Reddit
+Pinterest
+Twitch
+
+# --- acronyms people dictate ---
+SaaS
+ROI
+KPI
+CRM
+SEO
+UX
+UI
+B2B
+B2C
+MVP
+PDF
+CSV
+GDPR

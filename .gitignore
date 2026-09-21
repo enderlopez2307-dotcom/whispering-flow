@@ -1,0 +1,9 @@
+.build/
+.swiftpm/
+build/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+DerivedData/
+
+.whisperingflow-public-export

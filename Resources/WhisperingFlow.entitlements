@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      Microphone. Two keys, because macOS checks different ones depending on
+      how the app is signed and hardened:
+
+        com.apple.security.device.audio-input
+          The Hardened Runtime key. On macOS 26 this is the one checked before
+          the app is allowed to appear under Privacy & Security > Microphone.
+          Without it a hardened app can silently never receive the prompt.
+
+        com.apple.security.device.microphone
+          The App Sandbox flavour. Inert for us (we are not sandboxed) but
+          harmless, and it costs nothing to be correct under both regimes.
+
+      App Sandbox is deliberately absent: a system-wide CGEventTap and
+      Accessibility-based text injection are incompatible with it (ADR-011).
+
+      Anything added to this file widens the TCC/privilege surface and must be
+      justified in TECH_DECISIONS.md first.
+    -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <key>com.apple.security.device.microphone</key>
+    <true/>
+</dict>
+</plist>
