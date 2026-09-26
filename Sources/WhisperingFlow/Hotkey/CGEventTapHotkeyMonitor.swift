@@ -71,10 +71,7 @@ final class CGEventTapHotkeyMonitor: HotkeyMonitoring {
          triggerMode: TriggerMode = .hold,
          holdThreshold: Double = 0.15,
          handsFree: Bool = false,
-         // Under the capture buffer's 300 s ceiling (AVAudioEngineCapture), so a
-         // hands-free session ends and is transcribed before audio could
-         // overflow and clip the tail of what was said.
-         handsFreeLimit: Double = 285,
+         handsFreeLimit: Double = HandsFreeLimit.seconds,
          now: @escaping @MainActor @Sendable () -> Double = { ProcessInfo.processInfo.systemUptime }) {
         self.holdThreshold = holdThreshold
         self.now = now
@@ -436,4 +433,27 @@ private let tapCallback: CGEventTapCallBack = { _, type, event, userInfo in
     MainActor.assumeIsolated { monitor.handle(snapshot: snapshot) }
     // .listenOnly — always pass the event through untouched.
     return Unmanaged.passUnretained(event)
+}
+
+/// How long a hands-free session may run before it ends itself.
+///
+/// Under the capture buffer's 300 s ceiling (AVAudioEngineCapture), so a
+/// hands-free session ends and is transcribed before audio could overflow and
+/// clip the tail of what was said. The HUD counts down the last
+/// `warningWindow` seconds: on 25 Sept 2026 a 285 s answer was cut mid-sentence
+/// with no warning.
+enum HandsFreeLimit {
+    static let ceiling: Double = 285
+    static let warningWindow: Double = 15
+
+    /// `--hands-free-limit <seconds>` shortens it, so the countdown can be
+    /// checked live in half a minute. Clamped: it can never exceed the ceiling.
+    static let seconds: Double = {
+        let arguments = CommandLine.arguments
+        guard let index = arguments.firstIndex(of: "--hands-free-limit"),
+              index + 1 < arguments.count,
+              let value = Double(arguments[index + 1])
+        else { return ceiling }
+        return min(max(value, 10), ceiling)
+    }()
 }

@@ -347,3 +347,58 @@ struct CharacterIntegrityTests {
         }
     }
 }
+
+@Suite("Stumbles and number spacing")
+struct StumbleTests {
+
+    @Test("A doubled function word collapses to one", arguments: [
+        ("My my first week on the project", "My first week on the project"),
+        ("the owners of of the repo", "The owners of the repo"),
+        ("I think the, the, the parser side", "I think the parser side"),
+        ("to write the docs for, for, for a team to, to use",
+         "To write the docs for a team to use"),
+        ("And, and then the other tests", "And then the other tests"),
+        ("I, I did enjoy building this", "I did enjoy building this"),
+    ])
+    func doubledWordsCollapse(input: String, expected: String) {
+        #expect(run(input, english()) == expected)
+    }
+
+    @Test("Doubles that are real grammar, or not a stumble, survive", arguments: [
+        "I think that that is correct",
+        "She had had enough",
+        "What it is is a problem",
+        "We need to fill in in pen",
+        "Plan A, a new plan",
+        "I, I'm not sure",
+        "The theme then changed",
+    ])
+    func realDoublesSurvive(input: String) {
+        #expect(run(input, english()) == input)
+    }
+
+    @Test("Spanish collapses its own list and leaves La Liga alone")
+    func spanishStumbles() {
+        #expect(run("mi mi primera semana en el el proyecto", spanish()) == "Mi primera semana en el proyecto")
+        #expect(run("vimos la La Liga ayer", spanish()) == "Vimos la La Liga ayer")
+    }
+
+    @Test("Fast mode off switch still keeps every word")
+    func respectsFillerToggle() {
+        var context = english()
+        context.options.removeFillerWords = false
+        #expect(FillerStage().apply("my my week", context: context) == "my my week")
+    }
+
+    @Test("A spaced thousands suffix joins the number")
+    func thousandsSuffixJoins() {
+        #expect(run("we made over a 100 K in sales", english()) == "We made over a 100K in sales")
+        #expect(run("plan K is ready", english()) == "Plan K is ready")
+    }
+
+    @Test("An ordinal before an acronym is restored, before a name it is not")
+    func ordinalBeforeAcronym() {
+        #expect(run("the company's 1st API release", english()) == "The company's first API release")
+        #expect(run("we met on 5th Avenue", english()) == "We met on 5th Avenue")
+    }
+}

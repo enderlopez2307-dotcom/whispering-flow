@@ -73,6 +73,15 @@ public struct FillerStage: TextStage {
     /// Spanish phrases removable only when clearly parenthetical.
     static let spanishSoft = ["o sea", "digamos"]
 
+    /// Words the recogniser writes twice when the speaker stumbles ("my my
+    /// week", "the, the, the parser side"). Doubling any of these is never
+    /// grammatical. Left out on purpose: "that that" and "had had" are real
+    /// English, "is is" occurs ("what it is is"), "in in" ("fill in in pen"),
+    /// "a" ("Plan A, a new plan"), and Spanish "la"/"de" (La Liga, De la Cruz).
+    static let englishStutter = ["the", "an", "my", "your", "our", "their", "of", "for",
+                                 "with", "from", "to", "and", "i", "we"]
+    static let spanishStutter = ["el", "los", "las", "un", "una", "mi", "y"]
+
     public func apply(_ input: String, context: ProcessingContext) -> String {
         guard context.options.removeFillerWords else { return input }
         let spanish = context.locale == .spanish
@@ -84,7 +93,20 @@ public struct FillerStage: TextStage {
         for filler in spanish ? Self.spanishSoft : Self.englishSoft {
             text = Self.removeParenthetical(filler, from: text)
         }
+        // After fillers, so "the, um, the" is already "the, the".
+        for word in spanish ? Self.spanishStutter : Self.englishStutter {
+            text = Self.collapseRepeats(of: word, in: text)
+        }
         return text
+    }
+
+    /// "the the" / "the, the, the" → "the", keeping the first occurrence's
+    /// casing. An apostrophe ends the match, so "I, I'm" is left alone.
+    static func collapseRepeats(of word: String, in text: String) -> String {
+        let escaped = NSRegularExpression.escapedPattern(for: word)
+        let pattern = "(?<![\\p{L}\\p{N}'’])(\(escaped))(?:,?[ ]+\\1)+(?![\\p{L}\\p{N}'’])"
+        return text.replacingOccurrences(of: pattern, with: "$1",
+                                         options: [.regularExpression, .caseInsensitive])
     }
 
     /// Remove the word wherever it stands alone, taking a trailing comma with
@@ -196,6 +218,10 @@ public struct PunctuationSpacingStage: TextStage {
         // Ensure a space after a comma that runs into a word.
         text = text.replacingOccurrences(of: "([,;:])(?=[\\p{L}])", with: "$1 ", options: .regularExpression)
         text = text.replacingOccurrences(of: "[ ]{2,}", with: " ", options: .regularExpression)
+        // "100 K" → "100K": the recogniser spaces the thousands suffix.
+        // Uppercase only, so "5 k" in anything else is left alone.
+        text = text.replacingOccurrences(of: "(?<=\\p{Nd}) K(?![\\p{L}\\p{N}])", with: "K",
+                                         options: .regularExpression)
         return text
     }
 }
@@ -278,7 +304,9 @@ public struct OrdinalRestorationStage: TextStage {
             // **No `.caseInsensitive`.** Under ICU case-insensitive matching
             // `\p{Lu}` also matches lowercase, which inverted this rule
             // completely: prose ordinals were skipped and dates were rewritten.
-            let pattern = "(?<![\\p{L}\\p{N}])\(escaped)(?![\\p{L}\\p{N}])(?![ ]\\p{Lu})"
+            // A capital *then lowercase*: "5th Avenue" stays, but an acronym
+            // is not a street name, so "the 1st API release" becomes "first".
+            let pattern = "(?<![\\p{L}\\p{N}])\(escaped)(?![\\p{L}\\p{N}])(?![ ]\\p{Lu}\\p{Ll})"
             guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
 
             let source = text as NSString

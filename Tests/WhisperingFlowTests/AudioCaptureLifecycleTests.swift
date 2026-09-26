@@ -158,11 +158,17 @@ struct PreRollLifecycleTests {
 
         hotkey.onTriggerPressed?()
         hotkey.onPress?()
+        let lockedAt = Date()
         hotkey.onHandsFreeLocked?()
         #expect(coordinator.isHandsFree)
+        let endsAt = try? #require(coordinator.handsFreeEndsAt, "the HUD needs a deadline to count down to")
+        if let endsAt {
+            #expect(abs(endsAt.timeIntervalSince(lockedAt) - HandsFreeLimit.seconds) < 1)
+        }
 
         hotkey.onCancel?()
         #expect(!coordinator.isHandsFree, "a finished session must not stay marked hands-free")
+        #expect(coordinator.handsFreeEndsAt == nil, "a stale deadline would show a countdown next session")
     }
 
     @Test("A lock signal with no session (press ignored) does not mark hands-free")

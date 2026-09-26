@@ -22,7 +22,11 @@ final class DictationCoordinator {
     private(set) var currentSession: DictationSession?
     /// The running session was locked open by a double-tap, so the UI should
     /// say "tap to stop" instead of "release to stop".
-    private(set) var isHandsFree = false
+    private(set) var isHandsFree = false {
+        didSet { if !isHandsFree { handsFreeEndsAt = nil } }
+    }
+    /// When a locked session will end itself, so the HUD can count down.
+    private(set) var handsFreeEndsAt: Date?
 
     let recovery: TranscriptRecovery
 
@@ -203,6 +207,7 @@ final class DictationCoordinator {
     private func handleHandsFreeLocked() {
         guard case .listening = state else { return }
         isHandsFree = true
+        handsFreeEndsAt = Date().addingTimeInterval(HandsFreeLimit.seconds)
     }
 
     private func handleRelease() {

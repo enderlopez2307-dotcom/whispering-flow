@@ -390,6 +390,38 @@ struct SmartCleanupSafetyTests {
                 == .accepted("Deploy the Supabase function."))
     }
 
+    @Test("A rewrite that changes a fact is rejected", arguments: [
+        // Each mirrors a real Smart failure from a dictation log, Sept 2026.
+        ("out of those 8, 3 were 2 were on the design team and they both worked remotely",
+         "out of those 8, 3 were on the design team and they both worked remotely"),
+        ("And we made over a 100 K in sales in the first 11 months.",
+         "And we made over a $100K in sales in the first 11 months."),
+        ("Oh my god, I lost a whole day to a fucking stupid bug in the parser.",
+         "Oh my god, I lost a whole day to a stupid bug in the parser."),
+        ("How, when am I supposed to read them to check if I Massachusetts come or not?",
+         "How, when am I supposed to read them to check if I come or not?"),
+    ])
+    func rejectsFactChanges(input: String, output: String) {
+        if case .rejected = SmartCleanup.sanitize(output, against: input) {}
+        else { Issue.record("must be rejected: \(output)") }
+    }
+
+    @Test("Fixing a name, a hyphen, or a filler is still accepted", arguments: [
+        ("I wrote the queries within the repo in GitHubub. So I promoted",
+         "I wrote the queries within the repo in GitHub. So I promoted"),
+        ("Now moving to the second one. Colin Darley, Kubernet, or Deep Sick?",
+         "Now moving to the second one. Colin Darley, Kubernetes, or Deep Sick?"),
+        ("see how we can add a bunch of already English language words",
+         "see how we can add a bunch of already English-language words"),
+        ("Yeah, sure. So the short version, Shit, fuck's sake.",
+         "Sure. So the short version, Shit, fuck's sake."),
+        ("I moved to a Figma, which started in 2024, so the first 11 months",
+         "I moved to Figma's team, which started in 2024, so the first 11 months"),
+    ])
+    func acceptsFaithfulEdits(input: String, output: String) {
+        #expect(SmartCleanup.sanitize(output, against: input) == .accepted(output))
+    }
+
     @Test("Refusals are recognised in both languages")
     func recognisesRefusals() {
         for refusal in ["I'm sorry, I can't help with that", "I cannot assist with this request",

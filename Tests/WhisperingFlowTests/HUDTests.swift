@@ -1,3 +1,4 @@
+import Foundation
 import CoreGraphics
 import Testing
 @testable import WhisperingFlowKit
@@ -156,5 +157,47 @@ struct HUDPlacementTests {
         #expect(!HUDPlacement.isUsable(CGRect(x: CGFloat.nan, y: 0, width: 1, height: 1)))
         #expect(!HUDPlacement.isUsable(CGRect(x: 10, y: 10, width: 5, height: 0)))
         #expect(HUDPlacement.isUsable(CGRect(x: 10, y: 10, width: 0, height: 16)), "a zero-width caret is valid")
+    }
+}
+
+@Suite("Hands-free countdown (25 Sept: a 285 s answer was cut with no warning)")
+struct HandsFreeCountdownTests {
+    private let hint = "Tap Right Command to finish · Esc cancels"
+    private let now = Date(timeIntervalSinceReferenceDate: 1_000)
+
+    @Test("Before the last 15 s the usual hint shows")
+    func hintUntilWindow() {
+        let line = HUDModel.handsFreeLine(hint: hint, endsAt: now.addingTimeInterval(15.5), now: now)
+        #expect(line.text == hint)
+        #expect(!line.urgent)
+    }
+
+    @Test("Inside the window it counts down in whole seconds, rounded up", arguments: [
+        (15.0, "Stops in 15 s · tap to finish"),
+        (9.2, "Stops in 10 s · tap to finish"),
+        (0.4, "Stops in 1 s · tap to finish"),
+        (-2.0, "Stops in 0 s · tap to finish"),
+    ])
+    func countsDown(remaining: Double, expected: String) {
+        let line = HUDModel.handsFreeLine(hint: hint, endsAt: now.addingTimeInterval(remaining), now: now)
+        #expect(line.text == expected)
+        #expect(line.urgent)
+    }
+
+    @Test("No deadline means no countdown")
+    func noDeadline() {
+        #expect(HUDModel.handsFreeLine(hint: hint, endsAt: nil, now: now).text == hint)
+    }
+
+    @Test("The countdown is never wider than the hint it replaces, so the pill never grows")
+    func neverWider() {
+        let line = HUDModel.handsFreeLine(hint: hint, endsAt: now.addingTimeInterval(15), now: now)
+        #expect(line.text.count <= hint.count)
+    }
+
+    @Test("The limit stays under the 300 s capture buffer")
+    func underBuffer() {
+        #expect(HandsFreeLimit.seconds <= 285)
+        #expect(HandsFreeLimit.warningWindow < HandsFreeLimit.seconds)
     }
 }

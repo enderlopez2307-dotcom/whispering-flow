@@ -18,7 +18,18 @@ final class HUDModel {
     /// "Tap Right Command to finish · Esc cancels" — derived from the actual
     /// binding, never hardcoded (ADR-017).
     var handsFreeHint = ""
+    var handsFreeEndsAt: Date?
     var reduceMotion = false
+
+    /// The hands-free line: the usual hint, or a countdown once the session is
+    /// within `HandsFreeLimit.warningWindow` of ending itself. Shorter than the
+    /// hint on purpose, so the pill never needs to grow mid-session.
+    nonisolated static func handsFreeLine(hint: String, endsAt: Date?, now: Date) -> (text: String, urgent: Bool) {
+        guard let endsAt else { return (hint, false) }
+        let remaining = endsAt.timeIntervalSince(now)
+        guard remaining <= HandsFreeLimit.warningWindow else { return (hint, false) }
+        return ("Stops in \(max(0, Int(remaining.rounded(.up)))) s · tap to finish", true)
+    }
 }
 
 /// A floating pill with a live waveform while the microphone is open.
@@ -66,6 +77,7 @@ final class ListeningHUDController {
         withObservationTracking {
             _ = coordinator.state
             _ = coordinator.isHandsFree
+            _ = coordinator.handsFreeEndsAt
             _ = settings.preferences.showListeningHUD
             _ = settings.preferences.hotkey
         } onChange: { [weak self] in
@@ -91,6 +103,7 @@ final class ListeningHUDController {
         let next = Self.phase(for: coordinator.state,
                               handsFree: coordinator.isHandsFree,
                               enabled: settings.preferences.showListeningHUD)
+        model.handsFreeEndsAt = coordinator.handsFreeEndsAt
         guard next != model.phase else { return }
         let wasListening: Bool
         if case .listening = model.phase { wasListening = true } else { wasListening = false }
@@ -249,16 +262,30 @@ struct ListeningHUDView: View {
             case .hidden:
                 EmptyView()
             case .listening(let handsFree):
-                Circle()
-                    .fill(Color.red)
-                    .frame(width: 8, height: 8)
-                WaveformBars(bars: model.history.bars)
-                    .frame(width: 112, height: 26)
                 if handsFree {
-                    Text(model.handsFreeHint)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.75))
-                        .fixedSize()
+                    // Ticks once a second; only the last 15 s show a number.
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        let line = HUDModel.handsFreeLine(hint: model.handsFreeHint,
+                                                          endsAt: model.handsFreeEndsAt,
+                                                          now: context.date)
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(line.urgent ? Color.orange : Color.red)
+                                .frame(width: 8, height: 8)
+                            WaveformBars(bars: model.history.bars)
+                                .frame(width: 112, height: 26)
+                            Text(line.text)
+                                .font(.system(size: 11, weight: line.urgent ? .semibold : .medium))
+                                .foregroundStyle(line.urgent ? Color.orange : .white.opacity(0.75))
+                                .fixedSize()
+                        }
+                    }
+                } else {
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 8, height: 8)
+                    WaveformBars(bars: model.history.bars)
+                        .frame(width: 112, height: 26)
                 }
             case .working(let label):
                 ProgressDots(animated: !model.reduceMotion)
@@ -281,7 +308,8 @@ struct ListeningHUDView: View {
     private var accessibilityText: String {
         switch model.phase {
         case .hidden: ""
-        case .listening: "Listening"
+        case .listening:
+            HUDModel.handsFreeLine(hint: "Listening", endsAt: model.handsFreeEndsAt, now: Date()).text
         case .working(let label): label
         }
     }

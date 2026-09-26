@@ -221,6 +221,7 @@ struct SmartCleanup: Sendable {
         let ratio = input.isEmpty ? 1 : Double(text.count) / Double(input.count)
         if ratio > 1.6 { return .rejected("model expanded the text (\(String(format: "%.2f", ratio))×)") }
         if ratio < 0.4 { return .rejected("model dropped content (\(String(format: "%.2f", ratio))×)") }
+        if let why = SmartFidelity.violation(input: input, output: text) { return .rejected(why) }
         return .accepted(text)
     }
 
