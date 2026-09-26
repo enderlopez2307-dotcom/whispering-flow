@@ -24,9 +24,9 @@ review before relying on this for anything sensitive.
 | Sees every key press, system-wide (a `CGEventTap`) | To notice Right Command | **Listen-only**: it never blocks or alters an event. It keeps no key history and logs modifier *names* only, never characters or key codes |
 | Reads and writes other apps' text fields (Accessibility) | To insert dictated text | Refuses password fields, browser address bars and any app other than the one you started in; inserts with `AXSelectedText`, never by rewriting a whole field |
 | Uses the clipboard and posts ⌘V | Fallback insertion | Saves and restores your clipboard; marks dictated text *transient / concealed* so clipboard managers skip it |
-| Microphone | Dictation | Open only while you hold the key or during a hands-free session (which ends by itself after about 5 minutes). Not open while idle |
+| Microphone | Dictation | Open only while you hold the key or during a hands-free session (which ends by itself after 285 s, with a visible 15 s countdown). Not open while idle |
 | Local files | Dictionary, opt-in log | `~/Library/Application Support/WhisperingFlow/`. The transcript log is **off by default**, mode `0600`, capped at about 4 MB per file, and deletable from Settings |
-| On-device language model (Smart mode) | Tidying | Apple's local model, no tools, no network. Output is rejected if it grows or shrinks the text too much, refuses, or returns code fences |
+| On-device language model (Smart mode) | Tidying | Apple's local model, no tools, no network. Output is rejected if it grows or shrinks the text too much, refuses, returns code fences, drops a number, adds a currency symbol, removes a swear word, or deletes a mid-sentence capitalised word |
 | Network | none | No network code in the source. macOS itself downloads Apple's speech models once |
 | Dependencies | none | No third-party packages. Only Apple frameworks and this repository's own packages |
 
@@ -66,7 +66,7 @@ of private APIs beyond one undocumented registry key read for a diagnostic messa
 
 ## Test evidence
 
-All suites pass (app, gesture, audio, text: 318 tests at the time of writing), the release build
+All suites pass (app, gesture, audio, text: 329 tests as of 26 Sept 2026), the release build
 has zero warnings, and the safety rules above are held by tests (for example: the dictionary must
 not change ordinary sentences, the clipboard markers must be present, the log must roll over).
 

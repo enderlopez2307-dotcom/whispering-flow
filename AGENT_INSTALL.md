@@ -92,14 +92,17 @@ Only report success when the human confirms the text appeared.
 ## 5. What they get, so you can explain it
 
 - **Hold Right Command** to talk, release to insert. **Double-tap** to keep talking hands-free;
-  tap once to finish; Escape cancels. A hands-free session ends by itself after 5 minutes.
+  tap once to finish; Escape cancels. A hands-free session ends by itself after 4 min 45 s;
+  for the last 15 s the pill turns orange and counts down, so it never cuts off unannounced.
 - **Menu-bar icon → Language:** English or Spanish. It is a manual switch, not automatic.
 - **Menu-bar icon → Mode:**
-  - **Fast** — vocabulary and rule-based cleanup only. About 0.1 s after release. Never runs
-    a model. Best if speed matters most.
+  - **Fast** — vocabulary and rule-based cleanup only (drops "um"/"uh" and stumbles like
+    "the the"). About 0.1 s after release. Never runs a model. Best if speed matters most.
   - **Smart** — adds Apple's on-device model for a more polished result (fixes repeated
     words, run-ons). It takes longer (around 1 to 5 s depending on length) and can rephrase.
-    It is "more polished", not "more accurate". Needs Apple Intelligence; if it is
+    It is "more polished", not "more accurate". If the model drops a number, adds a currency
+    sign, removes a swear word or deletes a name, its version is discarded and the Fast text
+    is used. Needs Apple Intelligence; if it is
     unavailable the app falls back to Fast and shows a warning icon.
 - **Starter vocabulary:** about 170 pre-made corrections for common product and developer
   names (Supabase, Cloudflare, ChatGPT, GitHub…), so it is accurate on those from day one.

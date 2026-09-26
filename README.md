@@ -13,12 +13,15 @@ It is built to be installed by **your own AI agent**. Give it this repository an
 - **Hold to talk, or double-tap to keep talking.** Hold Right Command while you speak. Or
   double-tap it to go hands-free, tap once to finish, Escape to cancel.
 - **A live waveform** appears next to your text cursor while it listens, so you always know the
-  microphone is open. (In hands-free mode it also tells you how to stop.)
+  microphone is open. In hands-free mode it also tells you how to stop, and turns orange to
+  count down the last 15 seconds before a long session ends by itself (just under 5 minutes).
 - **English and Spanish**, switched from the menu bar.
 - **Two modes.** *Fast* inserts the text about a tenth of a second after you let go and never
-  runs a language model. *Smart* adds Apple's on-device model to tidy the result (repeated
-  words, run-on sentences). It takes a second or more, and it is *more polished*, not *more
-  accurate*.
+  runs a language model. It still removes "um"/"uh" and stumbles like "the the" or "my, my".
+  *Smart* adds Apple's on-device model to tidy the result (false starts, run-on sentences). It
+  takes a second or more, and it is *more polished*, not *more accurate*: if the model drops a
+  number, adds a currency sign, softens a swear word or deletes a name, its version is thrown
+  away and you get the Fast text instead.
 - **A starter dictionary** of about 170 corrections for product and developer names
   (Supabase, Cloudflare, ChatGPT, GitHub, Claude Code…), so common names come out right from
   the first day.
