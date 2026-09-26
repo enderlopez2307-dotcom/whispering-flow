@@ -26,7 +26,7 @@ struct QuestionMarkFieldTests {
 
     @Test("The statement the same field log started with 'When' is left alone")
     func whenStatement() {
-        let text = "When I was in my previous chat, it said that we were going to practice the interviews."
+        let text = "When I was in my previous chat, it said that we were going to practice the demo."
         #expect(fix(text) == text)
     }
 }

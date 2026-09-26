@@ -160,7 +160,7 @@ struct HUDPlacementTests {
     }
 }
 
-@Suite("Hands-free countdown (25 Sept: a 285 s answer was cut with no warning)")
+@Suite("Hands-free countdown")
 struct HandsFreeCountdownTests {
     private let hint = "Tap Right Command to finish · Esc cancels"
     private let now = Date(timeIntervalSinceReferenceDate: 1_000)

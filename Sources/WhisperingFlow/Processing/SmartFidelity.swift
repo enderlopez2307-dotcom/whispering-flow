@@ -3,14 +3,16 @@ import Foundation
 /// Rejects a Smart rewrite that changed a fact rather than the wording.
 ///
 /// The length check in `SmartCleanup.sanitize` catches summaries and
-/// expansions. These catch the small edits it cannot see, each one seen in a
-/// real dictation log (Sept 2026):
+/// expansions. These catch the small edits it cannot see:
 /// - "3 were, 2 were on the team" → "3 were on the team": the model collapsed
 ///   a self-correction and kept the wrong number.
 /// - "100 K in sales" → "$100K": it invented a currency the speaker never said.
 /// - "a fucking stupid bug" → "a stupid bug": it censored the speaker.
-/// - "check if I Massachusetts come" → "check if I come": it deleted a
-///   capitalised word, which is how a misrecognised name usually looks.
+/// - "whether the Portland build passed" → "whether the build passed": it
+///   deleted a capitalised word, which is how a misrecognised name usually looks.
+///
+/// **Reasons never quote the text.** They reach OSLog with `.public` privacy
+/// (ProductionTextProcessor), and transcript text never goes to OSLog.
 ///
 /// A rejection returns the deterministic text, which is always acceptable, so
 /// every check leans towards rejecting. Smart is "more polished", never "more
@@ -19,9 +21,8 @@ enum SmartFidelity {
 
     /// Why `output` is not a faithful rewrite of `input`, or nil when it is.
     static func violation(input: String, output: String) -> String? {
-        let missingNumbers = numbers(in: input).subtracting(numbers(in: output))
-        if let number = missingNumbers.sorted().first {
-            return "model dropped the number \(number)"
+        if !numbers(in: input).isSubset(of: numbers(in: output)) {
+            return "model dropped a number"
         }
         if currencyCount(output) > currencyCount(input) {
             return "model added a currency symbol"
@@ -33,8 +34,8 @@ enum SmartFidelity {
         let outputWords = Set(words(in: output).flatMap { word in
             [comparable(word)] + word.split(separator: "-").map { comparable(String($0)) }
         })
-        if let name = capitalisedMidSentence(input).first(where: { !isKept(comparable($0), in: outputWords) }) {
-            return "model dropped the capitalised word \"\(name)\""
+        if capitalisedMidSentence(input).contains(where: { !isKept(comparable($0), in: outputWords) }) {
+            return "model dropped a capitalised word"
         }
         return nil
     }

@@ -391,30 +391,37 @@ struct SmartCleanupSafetyTests {
     }
 
     @Test("A rewrite that changes a fact is rejected", arguments: [
-        // Each mirrors a real Smart failure from a dictation log, Sept 2026.
+        // One per kind of fact change the model has been seen to make.
         ("out of those 8, 3 were 2 were on the design team and they both worked remotely",
          "out of those 8, 3 were on the design team and they both worked remotely"),
         ("And we made over a 100 K in sales in the first 11 months.",
          "And we made over a $100K in sales in the first 11 months."),
         ("Oh my god, I lost a whole day to a fucking stupid bug in the parser.",
          "Oh my god, I lost a whole day to a stupid bug in the parser."),
-        ("How, when am I supposed to read them to check if I Massachusetts come or not?",
-         "How, when am I supposed to read them to check if I come or not?"),
+        ("Can you check whether the Portland build passed or not?",
+         "Can you check whether the build passed or not?"),
     ])
     func rejectsFactChanges(input: String, output: String) {
-        if case .rejected = SmartCleanup.sanitize(output, against: input) {}
-        else { Issue.record("must be rejected: \(output)") }
+        guard case .rejected(let why) = SmartCleanup.sanitize(output, against: input) else {
+            Issue.record("must be rejected: \(output)")
+            return
+        }
+        // The reason is logged to OSLog as public; it must never quote what was said.
+        for word in SmartFidelity.words(in: input) where word.count > 3 {
+            #expect(!why.localizedCaseInsensitiveContains(word), "reason quotes dictated text: \(why)")
+        }
+        #expect(SmartFidelity.numbers(in: why).isEmpty, "reason quotes a dictated number: \(why)")
     }
 
     @Test("Fixing a name, a hyphen, or a filler is still accepted", arguments: [
         ("I wrote the queries within the repo in GitHubub. So I promoted",
          "I wrote the queries within the repo in GitHub. So I promoted"),
-        ("Now moving to the second one. Colin Darley, Kubernet, or Deep Sick?",
-         "Now moving to the second one. Colin Darley, Kubernetes, or Deep Sick?"),
+        ("Next up for the cluster. Kubernet or Postgress?",
+         "Next up for the cluster. Kubernetes or Postgres?"),
         ("see how we can add a bunch of already English language words",
          "see how we can add a bunch of already English-language words"),
-        ("Yeah, sure. So the short version, Shit, fuck's sake.",
-         "Sure. So the short version, Shit, fuck's sake."),
+        ("Yeah, sure. So the short version, damn it, is this.",
+         "Sure. So the short version, damn it, is this."),
         ("I moved to a Figma, which started in 2024, so the first 11 months",
          "I moved to Figma's team, which started in 2024, so the first 11 months"),
     ])

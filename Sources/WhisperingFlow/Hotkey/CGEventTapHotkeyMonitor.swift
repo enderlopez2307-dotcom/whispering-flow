@@ -440,8 +440,7 @@ private let tapCallback: CGEventTapCallBack = { _, type, event, userInfo in
 /// Under the capture buffer's 300 s ceiling (AVAudioEngineCapture), so a
 /// hands-free session ends and is transcribed before audio could overflow and
 /// clip the tail of what was said. The HUD counts down the last
-/// `warningWindow` seconds: on 25 Sept 2026 a 285 s answer was cut mid-sentence
-/// with no warning.
+/// `warningWindow` seconds, so a long dictation is never cut off unannounced.
 enum HandsFreeLimit {
     static let ceiling: Double = 285
     static let warningWindow: Double = 15

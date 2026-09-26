@@ -97,8 +97,8 @@ struct FillerTests {
 
     @Test("Spanish hesitation sounds are removed")
     func spanishHardFillersGo() {
-        #expect(FillerStage().apply("el trabajo no va mal eh tengo buen sueldo", context: spanish())
-                == "el trabajo no va mal tengo buen sueldo")
+        #expect(FillerStage().apply("el proyecto no va mal eh tengo buen equipo", context: spanish())
+                == "el proyecto no va mal tengo buen equipo")
     }
 
     @Test("Filler removal can be turned off entirely")
