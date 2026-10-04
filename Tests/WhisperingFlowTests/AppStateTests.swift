@@ -164,6 +164,16 @@ struct SettingsStoreTests {
         #expect(second.preferences.playFeedbackSounds == false)
     }
 
+    @Test("Automatic language survives a restart, and English stays the default")
+    func automaticLanguagePersists() {
+        let defaults = makeDefaults()
+        #expect(SettingsStore(defaults: defaults).preferences.locale == .englishUS)
+        SettingsStore(defaults: defaults).preferences.locale = .automatic
+        #expect(SettingsStore(defaults: defaults).preferences.locale == .automatic)
+        // The engine recognises the setting's raw value as its automatic mode.
+        #expect(Preferences.DictationLocale.automatic.rawValue == AppleSpeechEngine.automaticLocale)
+    }
+
     @Test("A bare-modifier hotkey round-trips, left/right preserved")
     func bareModifierRoundTrips() {
         let defaults = makeDefaults()

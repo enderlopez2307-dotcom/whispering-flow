@@ -383,6 +383,26 @@ struct StumbleTests {
         #expect(run("vimos la La Liga ayer", spanish()) == "Vimos la La Liga ayer")
     }
 
+    @Test("A removed filler takes its trailing dots with it", arguments: [
+        // Field log 2 Oct: a filler with dots after a full stop left four dots.
+        ("We shipped the build. Um... Then the tests ran.", "We shipped the build. Then the tests ran."),
+        ("We shipped the build. Uh. Then the tests ran.", "We shipped the build. Then the tests ran."),
+        ("We shipped the build. Um… Then the tests ran.", "We shipped the build. Then the tests ran."),
+        ("I went to um... the store", "I went to the store"),
+    ])
+    func fillerTakesItsDots(input: String, expected: String) {
+        #expect(run(input, english()) == expected)
+    }
+
+    @Test("Dots that belong to the sentence survive", arguments: [
+        "Wait... What happened here",
+        "I was thinking... Maybe tomorrow",
+        "So it goes. And then... Nothing",
+    ])
+    func realEllipsisSurvives(input: String) {
+        #expect(run(input, english()) == input)
+    }
+
     @Test("Fast mode off switch still keeps every word")
     func respectsFillerToggle() {
         var context = english()

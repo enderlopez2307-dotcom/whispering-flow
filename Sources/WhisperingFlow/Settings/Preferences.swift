@@ -26,11 +26,16 @@ struct Preferences: Sendable, Equatable {
     }
 
     enum DictationLocale: String, Sendable, CaseIterable {
+        /// Both recognisers listen and each stretch of speech is taken from the
+        /// one that understood it (`BilingualMerge`). Must equal
+        /// `AppleSpeechEngine.automaticLocale`.
+        case automatic = "auto"
         case englishUS = "en-US"
         case spanishES = "es-ES"
 
         var title: String {
             switch self {
+            case .automatic: "Automatic (English + Spanish)"
             case .englishUS: "English (US)"
             case .spanishES: "Spanish (Spain)"
             }

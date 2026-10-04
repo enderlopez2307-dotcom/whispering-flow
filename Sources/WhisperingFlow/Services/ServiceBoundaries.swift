@@ -1,5 +1,6 @@
 import Foundation
 import HotkeyGestureCore
+import TextProcessingCore
 
 /// The seams later phases fill in.
 ///
@@ -97,8 +98,18 @@ struct AudioClip: Sendable, Equatable {
 struct EngineTranscript: Sendable, Equatable {
     let text: String
     let locale: String
+    /// Automatic mode: the language the merge settled on, or nil when the
+    /// dictation was mixed (then `bilingual.runs` holds each language's part).
     let detectedLocale: String?
     let confidence: Double?
+    /// Automatic mode only: what each recogniser heard, and the merge's runs.
+    var bilingual: BilingualDetail? = nil
+}
+
+struct BilingualDetail: Sendable, Equatable {
+    let englishText: String
+    let spanishText: String
+    let runs: [LanguageRun]
 }
 
 // MARK: - Phase 7/8: text processing and insertion

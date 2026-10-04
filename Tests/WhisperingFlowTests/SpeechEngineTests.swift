@@ -504,6 +504,59 @@ struct ProcessingOrderTests {
         // `este` is a demonstrative here and must survive (benchmark #14).
         #expect(result.contains("este archivo"))
     }
+
+    private func automatic(_ runs: [LanguageRun], detected: String?) -> EngineTranscript {
+        EngineTranscript(text: runs.map(\.text).joined(separator: " "), locale: "auto",
+                         detectedLocale: detected, confidence: nil,
+                         bilingual: BilingualDetail(englishText: "", spanishText: "", runs: runs))
+    }
+
+    @Test("Automatic mode uses the detected language's rules, not the setting's")
+    func automaticUsesDetectedLanguage() async {
+        let result = await processor([]).process(
+            automatic([LanguageRun(language: .spanish, text: "quiero que revises este archivo")],
+                      detected: "es-ES"),
+            smart: false)
+        #expect(result.contains("este archivo"))
+    }
+
+    @Test("A mixed dictation is cleaned one language at a time, with one trailing space")
+    func mixedCleansPerLanguage() async {
+        // English rules drop "um" and add the question mark; Spanish rules keep
+        // `este`. Each part is capitalised as its own sentence.
+        let result = await processor([]).process(
+            automatic([LanguageRun(language: .english, text: "um does that mean we ship today."),
+                       LanguageRun(language: .spanish, text: "quiero que revises este archivo.")],
+                      detected: nil),
+            smart: false)
+        #expect(result == "Does that mean we ship today? Quiero que revises este archivo. ")
+    }
+
+    @Test("A switch after a comma stays mid-sentence")
+    func switchAfterCommaKeepsLowercase() async {
+        let result = await processor([]).process(
+            automatic([LanguageRun(language: .english, text: "so I tried it today,"),
+                       LanguageRun(language: .spanish, text: "y luego seguimos mañana.")],
+                      detected: nil),
+            smart: false)
+        #expect(result == "So I tried it today, y luego seguimos mañana. ")
+    }
+
+    @Test("Smart leaves a mixed dictation alone and says why")
+    func mixedSkipsSmart() async {
+        let box = TraceCollector()
+        let processor = ProductionTextProcessor(vocabulary: { [] }, onTrace: { box.store($0) })
+        let result = await processor.process(
+            automatic([LanguageRun(language: .english, text: "send this today."),
+                       LanguageRun(language: .spanish, text: "nos vemos mañana.")],
+                      detected: nil),
+            smart: true)
+        #expect(result == "Send this today. Nos vemos mañana. ")
+        let trace = await box.received
+        #expect(trace?.smart == nil)
+        #expect(trace?.smartFallbackReason == "mixed English and Spanish")
+        #expect(trace?.detectedLanguage == "mixed")
+    }
 }
 
 @Suite("Processing runs off the main actor without trapping")

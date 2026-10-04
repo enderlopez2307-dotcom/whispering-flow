@@ -44,10 +44,17 @@ enum DiagnosticTranscriptLog {
                        delivery: String,
                        target: String?) {
         let stamp = ISO8601DateFormatter().string(from: Date())
-        var entry = "[\(stamp)] \(locale) audio=\(String(format: "%.2f", audioSeconds))s "
+        let heard = trace?.detectedLanguage.map { "\(locale)→\($0)" } ?? locale
+        var entry = "[\(stamp)] \(heard) audio=\(String(format: "%.2f", audioSeconds))s "
         entry += "finalize=\(String(format: "%.1f", finalizeMs))ms\n"
         if let trace {
             entry += "  engine       : \(trace.engine)\n"
+            // Automatic mode: the recogniser that lost, so a wrong language
+            // choice can be seen in a log review.
+            if let bilingual = trace.bilingual {
+                if trace.detectedLanguage != "en-US" { entry += "  english heard: \(bilingual.englishText)\n" }
+                if trace.detectedLanguage != "es-ES" { entry += "  spanish heard: \(bilingual.spanishText)\n" }
+            }
             if trace.afterVocabulary != trace.engine {
                 entry += "  vocabulary   : \(trace.afterVocabulary)\n"
                 entry += "  rules fired  : \(trace.vocabularyHits.joined(separator: ", "))\n"

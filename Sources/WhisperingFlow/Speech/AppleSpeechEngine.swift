@@ -2,6 +2,7 @@ import AVFoundation
 import AudioCaptureCore
 import Foundation
 import Speech
+import TextProcessingCore
 
 /// Apple `SpeechAnalyzer` + `SpeechTranscriber`, on device.
 ///
@@ -18,12 +19,25 @@ actor AppleSpeechEngine: SpeechEngine {
     private struct Session {
         let locale: String
         let analyzer: SpeechAnalyzer
-        let transcriber: SpeechTranscriber
+        /// One per language: a single transcriber normally, English and
+        /// Spanish side by side in automatic mode.
+        let transcribers: [SpeechTranscriber]
         let continuation: AsyncStream<AnalyzerInput>.Continuation
-        let results: Task<String, Never>
+        let results: [Task<Heard, Never>]
         let feeder: Task<Void, Never>
         let startedAt: Date
     }
+
+    /// What one transcriber produced. Words are only collected in automatic
+    /// mode, where the merge needs their timing and confidence.
+    struct Heard: Sendable {
+        var text = ""
+        var words: [TimedWord] = []
+    }
+
+    /// The `locale` that asks for automatic English/Spanish.
+    static let automaticLocale = "auto"
+    static let automaticPair = ["en-US", "es-ES"]
 
     private var activeSession: Session?
     private var readiness: [String: EngineReadiness] = [:]
@@ -45,6 +59,10 @@ actor AppleSpeechEngine: SpeechEngine {
     /// both locales at launch — Phase 2.5 Q1 established that `en_US` and
     /// `es_ES` reserve simultaneously (max 5), so switching costs nothing later.
     func prepare(locale identifier: String) async throws {
+        if identifier == Self.automaticLocale {
+            for locale in Self.automaticPair { try await prepare(locale: locale) }
+            return
+        }
         if readiness[identifier]?.isReady == true { return }
 
         let locale = Locale(identifier: identifier.replacingOccurrences(of: "_", with: "-"))
@@ -94,11 +112,25 @@ actor AppleSpeechEngine: SpeechEngine {
         // about, and it is the reason the flag exists at all.
         guard activeSession == nil else { throw SpeechEngineError.sessionAlreadyActive }
 
-        let locale = Locale(identifier: identifier.replacingOccurrences(of: "_", with: "-"))
-        let transcriber = SpeechTranscriber(locale: locale, preset: .progressiveTranscription)
+        let automatic = identifier == Self.automaticLocale
+        let transcribers: [SpeechTranscriber]
+        if automatic {
+            // Time ranges and confidence per word are what the merge decides on.
+            // Requested only here, so single-language dictation is unchanged.
+            let preset = SpeechTranscriber.Preset.progressiveTranscription
+            transcribers = Self.automaticPair.map {
+                SpeechTranscriber(locale: Locale(identifier: $0),
+                                  transcriptionOptions: preset.transcriptionOptions,
+                                  reportingOptions: preset.reportingOptions,
+                                  attributeOptions: [.audioTimeRange, .transcriptionConfidence])
+            }
+        } else {
+            let locale = Locale(identifier: identifier.replacingOccurrences(of: "_", with: "-"))
+            transcribers = [SpeechTranscriber(locale: locale, preset: .progressiveTranscription)]
+        }
         var resolved = analyzerFormats[identifier]
         if resolved == nil {
-            resolved = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber])
+            resolved = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: transcribers)
         }
         guard let format = resolved else {
             throw SpeechEngineError.analyzerUnavailable("no compatible audio format for \(identifier)")
@@ -106,20 +138,25 @@ actor AppleSpeechEngine: SpeechEngine {
         analyzerFormats[identifier] = format
 
         let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream()
-        let analyzer = SpeechAnalyzer(modules: [transcriber])
+        // One analyzer for both languages in automatic mode: both hear the
+        // same buffers, so their word timings share one clock.
+        let analyzer = SpeechAnalyzer(modules: transcribers)
 
         // Results are consumed concurrently with capture. This is what makes
         // key-up cheap: by release, everything but the tail is already done.
-        let results = Task<String, Never> {
-            var text = ""
-            do {
-                for try await result in transcriber.results where result.isFinal {
-                    text += String(result.text.characters)
+        let results = transcribers.map { transcriber in
+            Task<Heard, Never> {
+                var heard = Heard()
+                do {
+                    for try await result in transcriber.results where result.isFinal {
+                        heard.text += String(result.text.characters)
+                        if automatic { heard.words += Self.timedWords(in: result) }
+                    }
+                } catch {
+                    Log.speech.error("results stream: \(error.localizedDescription, privacy: .public)")
                 }
-            } catch {
-                Log.speech.error("results stream: \(error.localizedDescription, privacy: .public)")
+                return heard
             }
-            return text
         }
 
         // Convert and forward off the audio thread. The capture side only ever
@@ -136,14 +173,14 @@ actor AppleSpeechEngine: SpeechEngine {
             try await analyzer.start(inputSequence: stream)
         } catch {
             feeder.cancel()
-            results.cancel()
+            results.forEach { $0.cancel() }
             continuation.finish()
             throw SpeechEngineError.analyzerUnavailable(error.localizedDescription)
         }
 
         activeSession = Session(locale: identifier,
                                 analyzer: analyzer,
-                                transcriber: transcriber,
+                                transcribers: transcribers,
                                 continuation: continuation,
                                 results: results,
                                 feeder: feeder,
@@ -165,17 +202,64 @@ actor AppleSpeechEngine: SpeechEngine {
         } catch {
             Log.speech.error("finalize: \(error.localizedDescription, privacy: .public)")
         }
-        let text = await session.results.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        var heard: [Heard] = []
+        for task in session.results { heard.append(await task.value) }
 
         diagnostics.finalizeMilliseconds = Date().timeIntervalSince(finalizeStart) * 1000
         diagnostics.sessionsFinished += 1
-        Log.speech.info("finalized \(session.locale, privacy: .public) in \(Self.round2(self.diagnostics.finalizeMilliseconds), privacy: .public) ms, \(text.count, privacy: .public) chars")
 
-        guard !text.isEmpty else { throw SpeechEngineError.noSpeechDetected }
-        return EngineTranscript(text: text,
-                                locale: session.locale,
-                                detectedLocale: nil,
-                                confidence: nil)
+        let transcript: EngineTranscript
+        if session.locale == Self.automaticLocale, heard.count == 2 {
+            transcript = Self.merge(english: heard[0], spanish: heard[1])
+        } else {
+            transcript = EngineTranscript(
+                text: (heard.first?.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
+                locale: session.locale, detectedLocale: nil, confidence: nil)
+        }
+        let language = transcript.bilingual.map { _ in transcript.detectedLocale ?? "mixed" } ?? session.locale
+        Log.speech.info("finalized \(session.locale, privacy: .public) → \(language, privacy: .public) in \(Self.round2(self.diagnostics.finalizeMilliseconds), privacy: .public) ms, \(transcript.text.count, privacy: .public) chars")
+
+        guard !transcript.text.isEmpty else { throw SpeechEngineError.noSpeechDetected }
+        return transcript
+    }
+
+    // MARK: - Automatic English/Spanish
+
+    static func merge(english: Heard, spanish: Heard) -> EngineTranscript {
+        let englishText = english.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let spanishText = spanish.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let result = BilingualMerge.merge(english: english.words, spanish: spanish.words,
+                                          englishText: englishText, spanishText: spanishText,
+                                          spanishLikelihood: LanguageLikelihood.spanish)
+        let detected: String? = switch result.language {
+        case .english: automaticPair[0]
+        case .spanish: automaticPair[1]
+        case nil: nil
+        }
+        return EngineTranscript(text: result.text.trimmingCharacters(in: .whitespacesAndNewlines),
+                                locale: automaticLocale,
+                                detectedLocale: detected,
+                                confidence: nil,
+                                bilingual: BilingualDetail(englishText: englishText,
+                                                           spanishText: spanishText,
+                                                           runs: result.runs))
+    }
+
+    /// One `TimedWord` per attributed run. The last word of a result is marked:
+    /// the recogniser closed the result there because it heard a pause.
+    static func timedWords(in result: SpeechTranscriber.Result) -> [TimedWord] {
+        var words: [TimedWord] = []
+        for run in result.text.runs {
+            let text = String(result.text[run.range].characters)
+            guard let range = run.audioTimeRange,
+                  !text.trimmingCharacters(in: .whitespaces).isEmpty else { continue }
+            words.append(TimedWord(text: text,
+                                   start: range.start.seconds,
+                                   end: range.end.seconds,
+                                   confidence: run.transcriptionConfidence ?? 0))
+        }
+        if !words.isEmpty { words[words.count - 1].endsSegment = true }
+        return words
     }
 
     func cancelSession() async {
@@ -183,7 +267,7 @@ actor AppleSpeechEngine: SpeechEngine {
         activeSession = nil
         session.feeder.cancel()
         session.continuation.finish()
-        session.results.cancel()
+        session.results.forEach { $0.cancel() }
         // Finalising a cancelled session would produce a transcript nobody
         // asked for; the analyzer is dropped without it.
         await session.analyzer.cancelAndFinishNow()

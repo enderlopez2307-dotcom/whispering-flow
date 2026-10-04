@@ -109,13 +109,23 @@ public struct FillerStage: TextStage {
                                          options: [.regularExpression, .caseInsensitive])
     }
 
-    /// Remove the word wherever it stands alone, taking a trailing comma with
-    /// it. Unicode boundaries, so "umbrella" and "número" are untouched.
+    /// Remove the word wherever it stands alone, taking a trailing comma or
+    /// trailing dots with it. Unicode boundaries, so "umbrella" and "número"
+    /// are untouched.
+    ///
+    /// The dots belong to the hesitation: leaving them turned "done. Um...
+    /// Then" into "done.... Then". A lone period goes only when the filler
+    /// opens a sentence ("done. Uh. Then"); mid-sentence it may be a real end.
     static func removeStandalone(_ word: String, from text: String) -> String {
         let escaped = NSRegularExpression.escapedPattern(for: word)
-        let pattern = "(?<![\\p{L}\\p{N}])\(escaped)(?![\\p{L}\\p{N}])[,]?[ ]?"
-        return text.replacingOccurrences(of: pattern, with: "",
-                                         options: [.regularExpression, .caseInsensitive])
+        let sentenceStart = "(?:^|(?<=[.?!…][ ]))\(escaped)(?![\\p{L}\\p{N}])(?:\\.{3}|…|[.,])?[ ]?"
+        let anywhere = "(?<![\\p{L}\\p{N}])\(escaped)(?![\\p{L}\\p{N}])(?:\\.{3}|…|,)?[ ]?"
+        var result = text
+        for pattern in [sentenceStart, anywhere] {
+            result = result.replacingOccurrences(of: pattern, with: "",
+                                                 options: [.regularExpression, .caseInsensitive])
+        }
+        return result
     }
 
     /// Remove only where the word is clearly an aside: fenced by commas, or

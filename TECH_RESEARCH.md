@@ -1586,3 +1586,24 @@ that start with a lone letter can match after an apostrophe ("let's lint" → "s
 Chrome and Electron often report no caret; the pill then anchors to the focused element or the
 screen bottom. Address bars and search boxes are text fields, and a new Chrome tab focuses the
 address bar by default, which is why insertion there is refused (ADR-023).
+
+## 24. Automatic English/Spanish (3 Oct 2026)
+
+Tool: `WhisperingFlow --probe-languages <dir>` (each .wav through the production automatic
+session; `PROBE_LOCALE=en-US` for one language, `PROBE_REALTIME=1` to feed at speaking pace).
+
+- **Two transcribers in one analyzer work.** `SpeechAnalyzer(modules: [en, es])` with a shared
+  format (16 kHz Int16) returns both result streams on one clock.
+- **Per-word attributes are present** with `attributeOptions: [.audioTimeRange,
+  .transcriptionConfidence]`: one run per word, leading space included.
+- **Confidence is not comparable across models.** English speech: EN 0.71–0.97, ES 0.63–0.88
+  (ES higher on #1). Spanish speech: EN 0.37–0.60, ES 0.91–1.00. Over Spanish speech the EN
+  model often emits comma-only tokens at 0.003–0.07.
+- **Segmentation differs between models.** The ES model often returns one result spanning both
+  languages, so result-level choice cannot split a mixed dictation; word timing can.
+- **The ES model re-spells English speech into English-looking text** ("Generate Animage of a
+  Coffee Shop"), which is what makes text-language identification of its output a usable signal.
+- Results: real 20/20; mixed WER 0.44 / 0.30 / 0.09 (EN-only / ES-only / merged); latency
+  release→text at speaking pace, EN-only vs automatic: 175/107, 973/996, 740/906, 1442/1504,
+  370/375, 647/696 ms.
+- The recogniser is not deterministic run to run: the same clip gave slightly different words.

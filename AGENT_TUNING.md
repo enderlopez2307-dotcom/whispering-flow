@@ -73,7 +73,8 @@ silently wiped.
 
 - A word the engine never produced anything close to. Say it slower, or spell out the name.
 - Grammar the engine got wrong. That is what **Smart** mode (menu-bar → Mode) polishes.
-- Language mixing inside one sentence. Switch language from the menu (it is manual).
+- Language mixing inside one sentence. **Automatic** (menu-bar → Language) handles switches between
+  sentences and phrases; a single foreign word inside a sentence stays in the sentence's language.
 
 ## Growing the shared starter dictionary (optional, developers)
 

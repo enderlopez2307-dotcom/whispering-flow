@@ -94,7 +94,8 @@ Only report success when the human confirms the text appeared.
 - **Hold Right Command** to talk, release to insert. **Double-tap** to keep talking hands-free;
   tap once to finish; Escape cancels. A hands-free session ends by itself after 4 min 45 s;
   for the last 15 s the pill turns orange and counts down, so it never cuts off unannounced.
-- **Menu-bar icon → Language:** English or Spanish. It is a manual switch, not automatic.
+- **Menu-bar icon → Language:** English (default), Spanish, or **Automatic (English + Spanish)**,
+  which runs both recognisers and keeps each stretch of speech from the one that understood it.
 - **Menu-bar icon → Mode:**
   - **Fast** — vocabulary and rule-based cleanup only (drops "um"/"uh" and stumbles like
     "the the"). About 0.1 s after release. Never runs a model. Best if speed matters most.

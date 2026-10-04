@@ -54,6 +54,11 @@ public enum DiagnosticsCommand {
             runTranscribeDirectory(at: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
             return true
         }
+        if let index = CommandLine.arguments.firstIndex(of: "--probe-languages"),
+           index + 1 < CommandLine.arguments.count {
+            runLanguageProbe(at: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
+            return true
+        }
         if arguments.contains("--probe-focus") {
             probeFocus()
             return true
@@ -140,6 +145,18 @@ public enum DiagnosticsCommand {
         let semaphore = DispatchSemaphore(value: 0)
         Task {
             await CorpusValidation.transcribeDirectory(directory, engine: AppleSpeechEngine())
+            semaphore.signal()
+        }
+        semaphore.wait()
+    }
+
+    /// Nonisolated on purpose: a `Task` created inside the main-actor
+    /// `runIfRequested` would itself run on the main actor, which the
+    /// semaphore is blocking.
+    private static func runLanguageProbe(at directory: URL) {
+        let semaphore = DispatchSemaphore(value: 0)
+        Task {
+            await LanguageProbe.probeDirectory(directory)
             semaphore.signal()
         }
         semaphore.wait()

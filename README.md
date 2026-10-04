@@ -15,7 +15,10 @@ It is built to be installed by **your own AI agent**. Give it this repository an
 - **A live waveform** appears next to your text cursor while it listens, so you always know the
   microphone is open. In hands-free mode it also tells you how to stop, and turns orange to
   count down the last 15 seconds before a long session ends by itself (just under 5 minutes).
-- **English and Spanish**, switched from the menu bar.
+- **English and Spanish.** English is the default. Choose **Automatic (English + Spanish)** in the
+  menu bar and both languages listen at once: each part of what you say is taken from the one that
+  understood it, so you can switch language mid-message. If a message stays in one language you
+  get exactly that language's text. Smart mode skips a mixed message and gives the Fast text.
 - **Two modes.** *Fast* inserts the text about a tenth of a second after you let go and never
   runs a language model. It still removes "um"/"uh" and stumbles like "the the" or "my, my".
   *Smart* adds Apple's on-device model to tidy the result (false starts, run-on sentences). It
@@ -47,7 +50,8 @@ There is no cloud model being trained on you, and this is not fine-tuning. Inste
 - It does not clone or train on your voice.
 - It cannot fix a word the speech engine got badly wrong, only ones it gets wrong the same way
   each time.
-- Language switching is manual.
+- Automatic language works per stretch of speech. A single Spanish word inside an English sentence
+  stays English, and a sentence that is half and half may land on either side.
 - Spanish speech with English product names is the weakest area: those names are spelled
   differently on each run, and the dictionary catches them one variant at a time.
 

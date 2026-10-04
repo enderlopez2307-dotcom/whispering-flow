@@ -1309,3 +1309,46 @@ clipboard with transient/concealed markers; Accessibility insertion calls are ti
 secure-input holder lookup runs off the main actor; the transcript log rolls at ~4 MB; the
 hands-free limit sits below the capture ceiling; the developer WAV reader rejects an empty data
 chunk.
+
+## ADR-031 — Automatic English/Spanish: both recognisers listen, each stretch from the one that understood it
+
+**Status:** Accepted (3 Oct 2026). Opt-in setting "Automatic (English + Spanish)"; English stays
+the default. Supersedes the deferral in IMPLEMENTATION_PLAN Phase 7 criterion 9.
+
+**Why now.** The field log (161 dictations, 15 Sept–3 Oct) has **zero** dictations in Spanish
+mode: the author never switches, so Spanish always goes through the English model and comes out
+unreadable, worst when a message mixes the two. The manual switch exists and is not used.
+
+**Decision.** In automatic mode one `SpeechAnalyzer` hosts an `en-US` and an `es-ES`
+`SpeechTranscriber`, both asked for per-word `audioTimeRange` and `transcriptionConfidence`.
+`BilingualMerge` (TextProcessingCore, pure) cuts the timeline at sentence ends, result ends and
+pauses ≥ 0.35 s from either model, and gives each stretch to Spanish only when the Spanish
+model's text is ≥ 0.9 Spanish by `NLLanguageRecognizer` **and** the English model visibly failed
+there (its text ≥ 0.5 Spanish, it heard no letters, or it is ≥ 0.25 less confident). Stretches
+too short to judge follow their neighbours. If the whole dictation lands in one language, that
+model's text is returned untouched; only a mixed dictation is reassembled, each part cleaned with
+its own language's rules. Smart is skipped for a mixed dictation (its prompts must match the
+content language).
+
+**Why both signals.** Confidence alone fails: on benchmark #1 the Spanish model was *more*
+confident on English speech (0.88 vs 0.71, "Open Determinal"). Text language alone fails the
+other way on short English. Apple's API has no language identification of its own.
+
+**Measured** (`--probe-languages <dir>`, TECH_RESEARCH §24): the author's 20 benchmark
+recordings 20/20 correct language, English-only path still 20/20 identical in
+`--validate-corpus`; 27 synthetic mixed clips (3 voices × EN→ES, ES→EN, EN→ES→EN × 3 pause
+lengths) word error 0.44 English-only → 0.30 Spanish-only → **0.09 merged**. Release-to-text
+latency at speaking pace within 0–160 ms of English-only.
+
+**Risks.** No real mixed recordings of the author exist yet: the synthetic set uses clean TTS
+voices. Both models run for every dictation (more energy). A Spanish word inside an English
+sentence ("Hola") stays English by design.
+
+**Amended after three live tests (3–4 Oct).** (1) At a switch, a word mostly overlapping the last
+word already kept is dropped: both models wrote the seam word, a little apart in time. (2) Up to
+3 English words the Spanish model heard nothing of follow their neighbours: a breath before
+Spanish speech had become an English phrase. (3) A word that alone reads ≥ 0.95 Spanish in the
+English model's text tips a Spanish stretch (a half-English Spanish sentence stayed English), and
+stretches of ≤ 2 words on both sides follow their neighbours (a sentence's last word was split
+off with a full stop before it). After each: real 20/20, mixed WER 0.08–0.09. A part that follows
+a comma keeps its lowercase start.
