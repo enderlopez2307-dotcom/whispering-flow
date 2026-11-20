@@ -39,8 +39,11 @@ def running_app_bundle():
 def is_ordinary(tokens):
     """(en_valid, es_valid) per token via the macOS spell checker."""
     binary = os.path.join(SUPPORT, ".wordcheck")
-    if not os.path.exists(binary):
-        subprocess.run(["swiftc", "-O", "-o", binary, os.path.join(HERE, "wordcheck.swift")], check=True)
+    source = os.path.join(HERE, "wordcheck.swift")
+    # Rebuild when missing or older than its source, so an old or planted binary at
+    # this path is never trusted forever.
+    if not os.path.exists(binary) or os.path.getmtime(binary) < os.path.getmtime(source):
+        subprocess.run(["swiftc", "-O", "-o", binary, source], check=True)
     out = subprocess.run([binary], input="\n".join(tokens) + "\n", text=True,
                          capture_output=True, check=True).stdout
     result = {}

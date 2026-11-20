@@ -91,7 +91,7 @@ echo "    logged-in human to allow the certificate import. An agent cannot answe
 # ---------------------------------------------------------------------- 3. build
 say "3/5  Building (the first build takes a few minutes)"
 echo "    If this seems stuck, a keychain dialog asking to let 'codesign' use the"
-echo "    key is waiting for the human. Choose Always Allow."
+echo "    key is waiting for the human. Choose Allow, not Always Allow."
 "$ROOT/Scripts/build.sh" release
 
 # -------------------------------------------------------------------- 4. install

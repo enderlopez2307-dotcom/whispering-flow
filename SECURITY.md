@@ -32,8 +32,10 @@ review before relying on this for anything sensitive.
 
 Signing and privileges: hardened runtime, **not sandboxed** (an event tap and Accessibility
 cannot be sandboxed), and the only entitlement is microphone access. The certificate is created
-on your Mac by `Scripts/create-signing-cert.sh`, its private key is usable only by `codesign`, and
-nothing in this repository contains a key, certificate or hash. The scripts need no `sudo` and
+on your Mac by `Scripts/create-signing-cert.sh`, and its private key is restricted to `codesign`.
+That alone does not stop another program from asking `codesign` to sign something with it, so when
+the keychain asks during a build, choose **Allow**, never **Always Allow**: Always Allow would let
+any program on your Mac sign itself as Whispering Flow and inherit its permissions. Nothing in this repository contains a key, certificate or hash. The scripts need no `sudo` and
 never touch macOS privacy (TCC) settings.
 
 ## Findings

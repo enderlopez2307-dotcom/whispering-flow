@@ -60,8 +60,11 @@ openssl pkcs12 -export -out bundle.p12 -inkey key.pem -in cert.pem -name "$NAME"
 
 echo "==> Importing into the login keychain"
 # -T /usr/bin/codesign, and deliberately NOT -A: only codesign may use this
-# private key, so no other process can sign code that would inherit this app's
-# TCC grants.
+# private key without a prompt. That is NOT a full guard on its own: codesign is a
+# tool any process running as you can call. If you answer the keychain dialog with
+# "Always Allow", any program could sign its own bundle as this app and inherit its
+# microphone, Input Monitoring and Accessibility grants. So answer "Allow", once
+# per build.
 security import bundle.p12 -k "$KEYCHAIN" -P "$PASS" -T /usr/bin/codesign
 
 rm -f key.pem bundle.p12

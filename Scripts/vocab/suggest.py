@@ -55,8 +55,11 @@ def main():
             contexts.setdefault(w, text[max(0, m.start() - 30): m.end() + 30].replace("\n", " "))
 
     binary = os.path.join(SUPPORT, ".wordcheck")
-    if not os.path.exists(binary):
-        subprocess.run(["swiftc", "-O", "-o", binary, os.path.join(HERE, "wordcheck.swift")], check=True)
+    source = os.path.join(HERE, "wordcheck.swift")
+    # Rebuild when missing or older than its source, so an old or planted binary at
+    # this path is never trusted forever.
+    if not os.path.exists(binary) or os.path.getmtime(binary) < os.path.getmtime(source):
+        subprocess.run(["swiftc", "-O", "-o", binary, source], check=True)
     out = subprocess.run([binary], input="\n".join(counts) + "\n", text=True,
                          capture_output=True, check=True).stdout
     unknown = []

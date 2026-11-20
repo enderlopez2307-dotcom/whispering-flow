@@ -40,7 +40,7 @@ dialog, then continue.
 ## 2. Install (one command)
 
 ```bash
-git clone <this-repository-url> whispering-flow
+git clone https://github.com/enderlopez2307-dotcom/whispering-flow.git whispering-flow
 cd whispering-flow
 ./Scripts/install.sh
 ```
@@ -56,7 +56,7 @@ Expect the first build to take a few minutes. It prints progress.
 
 A macOS keychain dialog is almost always waiting for the human. One appears while the
 certificate is created and another the first time `codesign` uses it ("codesign wants to use
-the key" — the human should choose **Always Allow**). Tell the human to look for a dialog.
+the key" — the human should choose **Allow**, not Always Allow: with Always Allow any program on the Mac could sign itself as Whispering Flow and inherit its microphone, Input Monitoring and Accessibility permissions. The dialog returns on each build, which is the point). Tell the human to look for a dialog.
 Do not try to work around it.
 
 ## 3. The human's steps (you cannot do these)
@@ -124,7 +124,7 @@ Only report success when the human confirms the text appeared.
 | Text transcribed but nothing appears | Accessibility not granted | Grant it and restart the app |
 | Text refused in Chrome/Safari | The cursor was in the **address bar**. A new tab focuses it by default, so this is on purpose | Click into the page first, or use Copy Last Transcript |
 | Permissions were lost after a rebuild | The app was signed ad-hoc | Run `./Scripts/install.sh`; `codesign -d -r- ~/Applications/WhisperingFlow.app` must show a certificate, never `cdhash` |
-| `build.sh` or `install.sh` hangs | A keychain dialog is waiting for the human | Ask them to look for it and choose Always Allow |
+| `build.sh` or `install.sh` hangs | A keychain dialog is waiting for the human | Ask them to look for it and choose Allow (not Always Allow) |
 | The app silently is not running after a restart | It has failed to launch before without saying so | `pgrep -lf WhisperingFlow.app`; run `~/Applications/WhisperingFlow.app/Contents/MacOS/WhisperingFlow` in a terminal to see the error |
 | Right Option types `ó` / `ñ` instead of dictating | Right Option is how Spanish accents are typed | Keep the default, Right Command |
 | F-key hotkeys (F6–F9) do nothing | macOS turns them into brightness/volume keys | System Settings → Keyboard → turn on "Use F1, F2, etc. keys as standard function keys" |
